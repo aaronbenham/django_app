@@ -1,0 +1,19 @@
+.container {
+  height: 50vh;
+  margin: 1rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  grid-gap: 10px 10px;
+}
+.cell {
+  color: white;
+  font-size: 3rem;
+  text-align: center;
+  padding: 4rem;
+  background: grey;
+}
+
+.video_feed {
+  height: 300px;
+}

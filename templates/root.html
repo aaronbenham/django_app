@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Adversarial Detection</title>
+    <link rel="stylesheet" type="text/css" media="screen" href="{% static 'styles/main.css'%}">
+    <script src="static/main.js"></script>
+</head>
+
+<body>
+    <h1>Online Adversarial Detection</h1>
+        <p>{{standard_scores}}</p>
+
+
+    <div class="container">
+        <img class="video_feed" src="{% url 'web_cam' %}">
+
+
+      <img class="video_feed" src="../static/saliency.jpg" alt=”Saliency">
+
+
+      <div><canvas id="StandardDeviationGraph"></canvas></div>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+        const labels = [
+            '1',
+            '2',
+            '3',
+            '4',
+            '5',
+            '6',
+          ];
+
+          const data = {
+            labels: labels,
+            datasets: [{
+              label: 'Standard Deviation of PCA',
+              backgroundColor: 'rgb(255, 99, 132)',
+              borderColor: 'rgb(255, 99, 132)',
+              data: [0, 10, 5, 2, 20, 30],
+            }]
+          };
+
+          const config = {
+            type: 'line',
+            data: data,
+            options: {}
+          };
+
+          const StandardDeviationGraph = new Chart(
+            document.getElementById('StandardDeviationGraph'),
+            config
+          );
+        </script>
+
+
+      <div><canvas id="AverageConfidenceGraph"></canvas></div>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+          const labels2 = [
+            '1',
+            '2',
+            '3',
+            '4',
+            '5',
+            '6',
+          ];
+
+          const data2 = {
+            labels: labels2,
+            datasets: [{
+              label: 'Average Confidence Score',
+              backgroundColor: 'rgb(255, 99, 132)',
+              borderColor: 'rgb(255, 99, 132)',
+              data: [0, 10, 5, 2, 20, 30],
+            }]
+          };
+
+          const config2 = {
+            type: 'line',
+            data: data2,
+            options: {}
+          };
+
+          const AverageConfidenceGraph = new Chart(
+            document.getElementById('AverageConfidenceGraph'),
+            config2
+          );
+        </script>
+
+
+      <div><canvas id="NumberOfBoundingBoxes"></canvas></div>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+          const dates3 = [
+            '1',
+            '2',
+            '3',
+            '4',
+            '5',
+            '6',
+          ];
+
+          const data3 = {
+            labels: dates3,
+            datasets: [{
+              label: 'Number of Bounding Boxes',
+              backgroundColor: 'rgb(255, 99, 132)',
+              borderColor: 'rgb(255, 99, 132)',
+              data: [0, 10, 5, 2, 20, 30],
+            }]
+          };
+
+          const config3 = {
+            type: 'line',
+            data: data3,
+            options: {}
+          };
+
+          const NumberOfBoundingBoxes = new Chart(
+            document.getElementById('NumberOfBoundingBoxes'),
+            config3
+          );
+        </script>
+      <div><canvas id="AverageConfidentScore"></canvas></div>
+
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+        const data4 = {
+          datasets: [{
+            label: 'Scatter Dataset',
+            data: [{
+              x: 0,
+              y: 0.6
+            }, {
+              x: 0,
+              y: 0.8
+            }, {
+              x: 0,
+              y: 0.9
+            }, {
+              x: 0,
+              y: 0.2
+            }],
+            backgroundColor: 'rgb(255, 99, 132)'
+          }],
+        };
+
+        const config4 = {
+          type: 'scatter',
+          data: data4,
+          options: {
+            scales: {
+              x: {
+                type: 'linear',
+                position: 'bottom'
+              }
+            }
+          }
+        };
+
+        const AverageConfidentScore = new Chart(
+            document.getElementById('AverageConfidentScore'),
+            config4
+          );
+
+        </script>
+    </div>
+    <div>
+        <h1 id="app">{{ standard_scores }}</h1>
+        <button onclick="updatechart()">Update</button>
+    </div>
+
+<script type="text/javascript" src="static/main.js"></script>
+<script>
+
+<!--var socket = new WebSocket('ws://localhost:8000/ws/some_url/');-->
+
+<!--socket.onmessage = function(event) {-->
+<!--    var data = JSON.parse(event.data);-->
+<!--    console.log(data.message);-->
+<!--    updatechart(data.message);-->
+<!--    document.querySelector('#app').innerText = data.message;-->
+<!--}-->
+
+function myFunction() {
+    updatechart({{ standard_scores }})
+    console.log("HELLO" + {{ standard_scores }})
+}
+
+</script>
+</body>
+</html>
