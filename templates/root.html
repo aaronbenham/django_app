@@ -11,49 +11,30 @@
 
 <body>
     <h1>Online Adversarial Detection</h1>
-        <p>{{standard_scores}}</p>
-
 
     <div class="container">
-        <img class="video_feed" src="{% url 'web_cam' %}">
 
+        <img class="video_feed" id="frame" src="">
 
-      <img class="video_feed" src="../static/saliency.jpg" alt=”Saliency">
+        <img class="video_feed" id="saliency" src="">
 
+        <div>
+            <button type="button" id="start">Start Camera!</button>
+            <label>Frame to attack:</label>
+            <input type="number" id="frame_attack" min="0">
 
-      <div><canvas id="StandardDeviationGraph"></canvas></div>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script>
-        const labels = [
-            '1',
-            '2',
-            '3',
-            '4',
-            '5',
-            '6',
-          ];
+            <form id="mainForm" name="mainForm">
+                <input type="radio" id="fast" name="attack_type" value="fast">
+                <label for="fast">FastGradientMethod</label><br>
+                <input type="radio" id="projected" name="attack_type" value="projected">
+                <label for="projected">ProjectedGradientDescent</label><br>
+            </form>
 
-          const data = {
-            labels: labels,
-            datasets: [{
-              label: 'Standard Deviation of PCA',
-              backgroundColor: 'rgb(255, 99, 132)',
-              borderColor: 'rgb(255, 99, 132)',
-              data: [0, 10, 5, 2, 20, 30],
-            }]
-          };
+            <label>eps:</label>
+            <input type="number" id="eps" min="1" max="20">
 
-          const config = {
-            type: 'line',
-            data: data,
-            options: {}
-          };
-
-          const StandardDeviationGraph = new Chart(
-            document.getElementById('StandardDeviationGraph'),
-            config
-          );
-        </script>
+            <span id="result"></span>
+        </div>
 
 
       <div><canvas id="AverageConfidenceGraph"></canvas></div>
@@ -74,14 +55,27 @@
               label: 'Average Confidence Score',
               backgroundColor: 'rgb(255, 99, 132)',
               borderColor: 'rgb(255, 99, 132)',
-              data: [0, 10, 5, 2, 20, 30],
+              data: [0, 0, 0, 0, 0, 0],
+            },
+            {
+              label: 'Above Threshold Average Confidence Score',
+              backgroundColor: 'rgb(0, 99, 132)',
+              borderColor: 'rgb(0, 99, 132)',
+              data: [0, 0, 0, 0, 0, 0],
             }]
           };
 
           const config2 = {
             type: 'line',
             data: data2,
-            options: {}
+            options: {
+                scales: {
+                    y: {
+                        suggestedMin: 0,
+                        suggestedMax: 1
+                    }
+                }
+            }
           };
 
           const AverageConfidenceGraph = new Chart(
@@ -89,6 +83,49 @@
             config2
           );
         </script>
+
+        <div><canvas id="StandardDeviationGraph"></canvas></div>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+
+            const labels = [
+                '1',
+                '2',
+                '3',
+                '4',
+                '5',
+                '6',
+              ];
+
+              const data = {
+                labels: labels,
+                datasets: [{
+                  label: 'Standard Deviation of PCA',
+                  backgroundColor: 'rgb(255, 99, 132)',
+                  borderColor: 'rgb(255, 99, 132)',
+                  data: [0, 0, 0, 0, 0, 0],
+                }]
+              };
+
+              const config = {
+                type: 'line',
+                data: data,
+                options: {
+                    scales: {
+                        y: {
+                            suggestedMin: 0,
+                            suggestedMax: 1
+                        }
+                    }
+                }
+              };
+
+              const StandardDeviationGraph = new Chart(
+                document.getElementById('StandardDeviationGraph'),
+                config
+              );
+        </script>
+
 
 
       <div><canvas id="NumberOfBoundingBoxes"></canvas></div>
@@ -109,14 +146,21 @@
               label: 'Number of Bounding Boxes',
               backgroundColor: 'rgb(255, 99, 132)',
               borderColor: 'rgb(255, 99, 132)',
-              data: [0, 10, 5, 2, 20, 30],
+              data: [0, 0, 0, 0, 0, 0],
             }]
           };
 
           const config3 = {
             type: 'line',
             data: data3,
-            options: {}
+            options: {
+                scales: {
+                    y: {
+                        suggestedMin: 0,
+                        suggestedMax: 15
+                    }
+                }
+            }
           };
 
           const NumberOfBoundingBoxes = new Chart(
@@ -124,72 +168,33 @@
             config3
           );
         </script>
-      <div><canvas id="AverageConfidentScore"></canvas></div>
 
-
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script>
-        const data4 = {
-          datasets: [{
-            label: 'Scatter Dataset',
-            data: [{
-              x: 0,
-              y: 0.6
-            }, {
-              x: 0,
-              y: 0.8
-            }, {
-              x: 0,
-              y: 0.9
-            }, {
-              x: 0,
-              y: 0.2
-            }],
-            backgroundColor: 'rgb(255, 99, 132)'
-          }],
-        };
-
-        const config4 = {
-          type: 'scatter',
-          data: data4,
-          options: {
-            scales: {
-              x: {
-                type: 'linear',
-                position: 'bottom'
-              }
-            }
-          }
-        };
-
-        const AverageConfidentScore = new Chart(
-            document.getElementById('AverageConfidentScore'),
-            config4
-          );
-
-        </script>
-    </div>
-    <div>
-        <h1 id="app">{{ standard_scores }}</h1>
-        <button onclick="updatechart()">Update</button>
     </div>
 
 <script type="text/javascript" src="static/main.js"></script>
+
 <script>
 
-<!--var socket = new WebSocket('ws://localhost:8000/ws/some_url/');-->
+var socket = new WebSocket('ws://localhost:8000/ws/some_url/');
 
-<!--socket.onmessage = function(event) {-->
-<!--    var data = JSON.parse(event.data);-->
-<!--    console.log(data.message);-->
-<!--    updatechart(data.message);-->
-<!--    document.querySelector('#app').innerText = data.message;-->
-<!--}-->
-
-function myFunction() {
-    updatechart({{ standard_scores }})
-    console.log("HELLO" + {{ standard_scores }})
+socket.onmessage = function(event) {
+    var data = JSON.parse(event.data);
+    console.log(data);
+    update_deviation_graph(data.std_score);
+    update_confidence_graph(data.confidence_score, data.above_threshold);
+    update_bounding_box_graph(data.num_boxes);
+    console.log(event.data)
+    document.getElementById("frame").src=data.output;
+    document.getElementById("saliency").src=data.saliency;
 }
+
+document.getElementById("start").onclick = function() {
+    var frame_attack = document.getElementById("frame_attack").value;
+    var attack_type = document.mainForm.attack_type.value;
+    var eps = document.getElementById("eps").value;
+    socket.send(JSON.stringify({"frame_to_attack": frame_attack, "attack_type": attack_type, "eps": eps}))
+}
+
 
 </script>
 </body>
