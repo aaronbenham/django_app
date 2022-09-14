@@ -29,68 +29,35 @@ class WSConsumer(WebsocketConsumer):
     def connect(self):
         self.accept()
 
-        # cam = Videocamera()
-        # frame_jpeg, frame_array = cam.get_frame()
-        # u, s, v, mean_img = calculate_cov(frame_array)
-        # attack = False
-        # frame = 0
-        #
-        # while True:
-        #     score, average_confidence_score, above_threshold_scores_average, number_of_boxes, output_jpg, saliency = gen(
-        #         cam, u, s, v, mean_img, attack)
-        #
-        #     img = base64.b64encode(output_jpg).decode()
-        #     saliency = base64.b64encode(saliency).decode()
-        #
-        #     self.send(json.dumps(
-        #         {'std_score': score, 'confidence_score': average_confidence_score, 'num_boxes': number_of_boxes,
-        #          'above_threshold': above_threshold_scores_average, 'output': "data:image/jpg;base64," + img,
-        #          'saliency': "data:image/jpg;base64," + saliency}))
-        #
-        #     if keyboard.is_pressed('q'):
-        #         print("Stopping...")
-        #         break
-        #
-        #     frame += 1
-        #     if frame == 3:
-        #         attack = True
-        #     else:
-        #         attack = False
-
 
     def receive(self, text_data):
+        frame = 1
+        if frame == 1:
+            cam = Videocamera()
+            frame_jpeg, frame_array = cam.get_frame()
+            u, s, v, mean_img = calculate_cov(frame_array)
+            frame += 1
+
         text_data_json = json.loads(text_data)
-        frame_to_attack = int(text_data_json['frame_to_attack'])
+        frame_to_attack = text_data_json['frame_to_attack']
         type_of_attack = text_data_json['attack_type']
         eps = int(text_data_json['eps'])
 
-        cam = Videocamera()
-        frame_jpeg, frame_array = cam.get_frame()
-        u, s, v, mean_img = calculate_cov(frame_array)
-        attack = False
-        frame = 1
+        if frame_to_attack == "attack":
+            attack = True
+        else:
+            attack = False
 
-        while True:
-            score, average_confidence_score, above_threshold_scores_average, number_of_boxes, output_jpg, saliency = \
-                gen(cam, u, s, v, mean_img, attack, type_of_attack, eps)
+        score, average_confidence_score, above_threshold_scores_average, number_of_boxes, output_jpg, saliency = \
+            gen(cam, u, s, v, mean_img, attack, type_of_attack, eps)
 
-            img = base64.b64encode(output_jpg).decode()
-            saliency = base64.b64encode(saliency).decode()
+        img = base64.b64encode(output_jpg).decode()
+        saliency = base64.b64encode(saliency).decode()
 
-            self.send(json.dumps(
-                {'std_score': score, 'confidence_score': average_confidence_score, 'num_boxes': number_of_boxes,
-                 'above_threshold': above_threshold_scores_average, 'output': "data:image/jpg;base64," + img,
-                 'saliency': "data:image/jpg;base64," + saliency}))
-
-            if keyboard.is_pressed('q'):
-                print("Stopping...")
-                break
-
-            frame += 1
-            if frame == frame_to_attack:
-                attack = True
-            else:
-                attack = False
+        self.send(json.dumps(
+            {'std_score': score, 'confidence_score': average_confidence_score, 'num_boxes': number_of_boxes,
+             'above_threshold': above_threshold_scores_average, 'output': "data:image/jpg;base64," + img,
+             'saliency': "data:image/jpg;base64," + saliency}))
 
 
 class Videocamera(object):

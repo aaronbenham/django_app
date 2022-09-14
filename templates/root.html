@@ -20,18 +20,26 @@
 
         <div>
             <button type="button" id="start">Start Camera!</button>
-            <label>Frame to attack:</label>
-            <input type="number" id="frame_attack" min="0">
 
-            <form id="mainForm" name="mainForm">
+            <form id="frame_attack_form" name="frame_attack_form">
+                <input type="radio" id="attack" name="frame_attack" value="attack">
+                <label for="attack">Attack</label><br>
+                <input type="radio" id="no_attack" name="frame_attack" value="no_attack">
+                <label for="no_attack">No Attack</label><br>
+            </form>
+
+            <div>
+                <label>eps:</label>
+                <input type="number" id="eps" min="1" max="20">
+            </div>
+
+            <form id="attack_type_form" name="attack_type_form">
                 <input type="radio" id="fast" name="attack_type" value="fast">
                 <label for="fast">FastGradientMethod</label><br>
                 <input type="radio" id="projected" name="attack_type" value="projected">
                 <label for="projected">ProjectedGradientDescent</label><br>
             </form>
 
-            <label>eps:</label>
-            <input type="number" id="eps" min="1" max="20">
 
             <span id="result"></span>
         </div>
@@ -186,15 +194,19 @@ socket.onmessage = function(event) {
     console.log(event.data)
     document.getElementById("frame").src=data.output;
     document.getElementById("saliency").src=data.saliency;
+    send_data();
 }
 
 document.getElementById("start").onclick = function() {
-    var frame_attack = document.getElementById("frame_attack").value;
-    var attack_type = document.mainForm.attack_type.value;
+    send_data();
+}
+
+function send_data() {
+    var frame_attack = document.frame_attack_form.frame_attack.value;
+    var attack_type = document.attack_type_form.attack_type.value;
     var eps = document.getElementById("eps").value;
     socket.send(JSON.stringify({"frame_to_attack": frame_attack, "attack_type": attack_type, "eps": eps}))
 }
-
 
 </script>
 </body>

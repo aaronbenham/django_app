@@ -12,10 +12,10 @@ function update_confidence_graph(overall_confidence, above_threshold) {
     AverageConfidenceGraph.config.data.datasets[0].data.shift();
 
     AverageConfidenceGraph.update();
-}
+};
 
 function update_bounding_box_graph(data) {
     NumberOfBoundingBoxes.config.data.datasets[0].data.push(data);
     NumberOfBoundingBoxes.config.data.datasets[0].data.shift();
     NumberOfBoundingBoxes.update();
-}
+};
