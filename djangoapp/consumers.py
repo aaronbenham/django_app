@@ -1,4 +1,5 @@
 import base64
+import io
 
 from channels.generic.websocket import WebsocketConsumer
 import keyboard
@@ -24,24 +25,54 @@ import os
 standard_scores = [8]
 standard_deviation_score = 0
 
+helpers = {
+    'u': 0,
+    's': 0,
+    'v': 0,
+    'mean_img': []}
 
 class WSConsumer(WebsocketConsumer):
     def connect(self):
         self.accept()
 
-
     def receive(self, text_data):
-        frame = 1
-        if frame == 1:
-            cam = Videocamera()
-            frame_jpeg, frame_array = cam.get_frame()
-            u, s, v, mean_img = calculate_cov(frame_array)
-            frame += 1
-
         text_data_json = json.loads(text_data)
-        frame_to_attack = text_data_json['frame_to_attack']
-        type_of_attack = text_data_json['attack_type']
-        eps = int(text_data_json['eps'])
+        frame_base64 = text_data_json['react_send_data']
+        frame_num = int(text_data_json['frames'])
+
+        image_b64 = frame_base64.split(",")[1]
+        binary = base64.b64decode(image_b64)
+        image = np.asarray(bytearray(binary), dtype="uint8")
+        frame_array = cv2.imdecode(image, cv2.COLOR_RGB2BGR)
+        frame_array = cv2.cvtColor(frame_array, cv2.COLOR_BGR2RGB)
+
+
+        if frame_num == 1:
+            # cam = Videocamera()
+            # frame_jpeg, frame_array = cam.get_frame()
+            u, s, v, mean_img = calculate_cov(frame_array)
+            helpers['u'] = u
+            helpers['s'] = s
+            helpers['v'] = v
+            helpers['mean_img'] = mean_img
+        else:
+            u = helpers['u']
+            s = helpers['s']
+            v = helpers['v']
+            mean_img = helpers['mean_img']
+
+        if frame_num == 3:
+            frame_to_attack = "attack"
+        else:
+            frame_to_attack = "no_attack"
+
+        # text_data_json = json.loads(text_data)
+        # frame_to_attack = text_data_json['frame_to_attack']
+        # type_of_attack = text_data_json['attack_type']
+        # eps = int(text_data_json['eps'])
+
+        type_of_attack = "fast"
+        eps = 10
 
         if frame_to_attack == "attack":
             attack = True
@@ -49,7 +80,7 @@ class WSConsumer(WebsocketConsumer):
             attack = False
 
         score, average_confidence_score, above_threshold_scores_average, number_of_boxes, output_jpg, saliency = \
-            gen(cam, u, s, v, mean_img, attack, type_of_attack, eps)
+            gen(u, s, v, mean_img, attack, type_of_attack, eps, frame_array)
 
         img = base64.b64encode(output_jpg).decode()
         saliency = base64.b64encode(saliency).decode()
@@ -80,10 +111,10 @@ class Videocamera(object):
             (self.grabbed, self.frame) = self.video.read()
 
 
-def gen(camera, u, s, v, mean_img, attack, type_of_attack, eps):
-    frame_jpeg, frame_array = camera.get_frame()
+def gen(u, s, v, mean_img, attack, type_of_attack, eps, frame_array):
+    # frame_jpeg, frame_array = camera.get_frame()
 
-    frame_array = cv2.cvtColor(frame_array, cv2.COLOR_BGR2RGB)
+    # frame_array = cv2.cvtColor(frame_array, cv2.COLOR_BGR2RGB)
     image = np.stack([frame_array], axis=0).astype(np.float32)
 
     if attack:
@@ -92,15 +123,15 @@ def gen(camera, u, s, v, mean_img, attack, type_of_attack, eps):
         elif type_of_attack == "projected":
             attack = ProjectedGradientDescent(estimator=frcnn, eps=eps, eps_step=2, max_iter=6)
 
-        output = cv2.cvtColor(image[0], cv2.COLOR_BGR2RGB)
-        cv2.imwrite('clean_frame.jpg', output)
+        # output = cv2.cvtColor(image[0], cv2.COLOR_BGR2RGB)
+        # cv2.imwrite('clean_frame.jpg', output)
 
-        os.system("python ../pytorch_grad_cam/cam.py --image-path clean_frame.jpg --method gradcam")
+        # os.system("python ../pytorch_grad_cam/cam.py --image-path clean_frame.jpg --method gradcam")
 
         image = attack.generate(x=image, y=None)
 
-        output = cv2.cvtColor(image[0], cv2.COLOR_BGR2RGB)
-        cv2.imwrite('attacked_frame.jpg', output)
+        # output = cv2.cvtColor(image[0], cv2.COLOR_BGR2RGB)
+        # cv2.imwrite('attacked_frame.jpg', output)
 
         predictions = frcnn.predict(x=image)
     else:
@@ -158,8 +189,8 @@ def calculate_cov(image):
     image = image.reshape((-1, 8 * 8 * 3))
 
     mean_img = np.mean(image, axis=0)
-    cov = np.dot((image - mean_img).T, (image - mean_img)) / image.shape[0]
-    u, s, v = np.linalg.svd(cov)
+    cov = np.dot((image - mean_img).T, (image - mean_img)) / image.shape[0]  # covariance
+    u, s, v = np.linalg.svd(cov)  # singular value decomposition
 
     return u, s, v, mean_img
 
