@@ -37,8 +37,18 @@ class WSConsumer(WebsocketConsumer):
 
     def receive(self, text_data):
         text_data_json = json.loads(text_data)
-        frame_base64 = text_data_json['react_send_data']
-        frame_num = int(text_data_json['frames'])
+
+        frame_to_attack = text_data_json['frame_attack']
+        type_of_attack = text_data_json['attack_type']
+        eps = int(text_data_json['eps'])
+
+        print("frame_to_attack", frame_to_attack)
+        print("type_of_attack", type_of_attack)
+        print("eps", eps)
+
+        frame_base64 = text_data_json['stream_image']
+        frame_num = int(text_data_json['frame_num'])
+        print(frame_num)
 
         image_b64 = frame_base64.split(",")[1]
         binary = base64.b64decode(image_b64)
@@ -46,8 +56,7 @@ class WSConsumer(WebsocketConsumer):
         frame_array = cv2.imdecode(image, cv2.COLOR_RGB2BGR)
         frame_array = cv2.cvtColor(frame_array, cv2.COLOR_BGR2RGB)
 
-
-        if frame_num == 1:
+        if frame_num == 0:
             # cam = Videocamera()
             # frame_jpeg, frame_array = cam.get_frame()
             u, s, v, mean_img = calculate_cov(frame_array)
@@ -66,10 +75,7 @@ class WSConsumer(WebsocketConsumer):
         else:
             frame_to_attack = "no_attack"
 
-        # text_data_json = json.loads(text_data)
-        # frame_to_attack = text_data_json['frame_to_attack']
-        # type_of_attack = text_data_json['attack_type']
-        # eps = int(text_data_json['eps'])
+
 
         type_of_attack = "fast"
         eps = 10
@@ -317,11 +323,18 @@ def extract_predictions(predictions_):
 
 
     # Get a list of index with score greater than threshold
+    # try:
     predictions_t = [predictions_score.index(x) for x in predictions_score if x > threshold][-1]
 
     predictions_boxes = predictions_boxes[: predictions_t + 1]
     predictions_class = predictions_class[: predictions_t + 1]
     prediction_plots = predictions_score[: predictions_t + 1]
+
+    # except:
+    #     predictions_boxes = []
+    #     predictions_class = []
+    #     prediction_plots = []
+    #     print("no objects detected")
 
     return predictions_class, predictions_boxes, predictions_class, prediction_plots, average_confidence_score, above_threshold_scores_average
 
