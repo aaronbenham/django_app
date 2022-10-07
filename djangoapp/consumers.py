@@ -38,17 +38,12 @@ class WSConsumer(WebsocketConsumer):
     def receive(self, text_data):
         text_data_json = json.loads(text_data)
 
-        frame_to_attack = text_data_json['frame_attack']
+        attack = text_data_json['frame_attack']
         type_of_attack = text_data_json['attack_type']
         eps = int(text_data_json['eps'])
 
-        print("frame_to_attack", frame_to_attack)
-        print("type_of_attack", type_of_attack)
-        print("eps", eps)
-
         frame_base64 = text_data_json['stream_image']
         frame_num = int(text_data_json['frame_num'])
-        print(frame_num)
 
         image_b64 = frame_base64.split(",")[1]
         binary = base64.b64decode(image_b64)
@@ -69,21 +64,6 @@ class WSConsumer(WebsocketConsumer):
             s = helpers['s']
             v = helpers['v']
             mean_img = helpers['mean_img']
-
-        if frame_num == 3:
-            frame_to_attack = "attack"
-        else:
-            frame_to_attack = "no_attack"
-
-
-
-        type_of_attack = "fast"
-        eps = 10
-
-        if frame_to_attack == "attack":
-            attack = True
-        else:
-            attack = False
 
         score, average_confidence_score, above_threshold_scores_average, number_of_boxes, output_jpg, saliency = \
             gen(u, s, v, mean_img, attack, type_of_attack, eps, frame_array)
@@ -129,15 +109,7 @@ def gen(u, s, v, mean_img, attack, type_of_attack, eps, frame_array):
         elif type_of_attack == "projected":
             attack = ProjectedGradientDescent(estimator=frcnn, eps=eps, eps_step=2, max_iter=6)
 
-        # output = cv2.cvtColor(image[0], cv2.COLOR_BGR2RGB)
-        # cv2.imwrite('clean_frame.jpg', output)
-
-        # os.system("python ../pytorch_grad_cam/cam.py --image-path clean_frame.jpg --method gradcam")
-
         image = attack.generate(x=image, y=None)
-
-        # output = cv2.cvtColor(image[0], cv2.COLOR_BGR2RGB)
-        # cv2.imwrite('attacked_frame.jpg', output)
 
         predictions = frcnn.predict(x=image)
     else:
@@ -150,7 +122,7 @@ def gen(u, s, v, mean_img, attack, type_of_attack, eps, frame_array):
 
         # Plot predictions
         output_jpg, number_of_boxes = plot_image_with_boxes(img=image[i].copy(), boxes=predictions_boxes,
-                                                                          pred_cls=predictions_class, pred_scr=predictions_score)
+                                                        pred_cls=predictions_class, pred_scr=predictions_score)
 
     x = image.reshape((-1, 8 * 8 * 3))
     img = np.dot(x - mean_img, u)
@@ -323,18 +295,19 @@ def extract_predictions(predictions_):
 
 
     # Get a list of index with score greater than threshold
-    # try:
-    predictions_t = [predictions_score.index(x) for x in predictions_score if x > threshold][-1]
+    try:
+        predictions_t = [predictions_score.index(x) for x in predictions_score if x > threshold][-1]
 
-    predictions_boxes = predictions_boxes[: predictions_t + 1]
-    predictions_class = predictions_class[: predictions_t + 1]
-    prediction_plots = predictions_score[: predictions_t + 1]
-
-    # except:
-    #     predictions_boxes = []
-    #     predictions_class = []
-    #     prediction_plots = []
-    #     print("no objects detected")
+        predictions_boxes = predictions_boxes[: predictions_t + 1]
+        predictions_class = predictions_class[: predictions_t + 1]
+        prediction_plots = predictions_score[: predictions_t + 1]
+    except:
+        predictions_boxes = []
+        predictions_class = []
+        prediction_plots = []
+        print("no objects detected")
+        average_confidence_score = 0
+        above_threshold_scores_average = 0
 
     return predictions_class, predictions_boxes, predictions_class, prediction_plots, average_confidence_score, above_threshold_scores_average
 
