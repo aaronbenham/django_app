@@ -1,12 +1,8 @@
 import base64
-import io
 
 from channels.generic.websocket import WebsocketConsumer
-import keyboard
 
 import json
-from random import randint
-from time import sleep
 
 import cv2
 import threading
@@ -21,7 +17,6 @@ from art.attacks.evasion.fast_gradient import FastGradientMethod
 
 import os
 
-
 standard_scores = [8]
 standard_deviation_score = 0
 
@@ -30,6 +25,8 @@ helpers = {
     's': 0,
     'v': 0,
     'mean_img': []}
+
+gradcam_images = ["", ""]
 
 class WSConsumer(WebsocketConsumer):
     def connect(self):
@@ -74,7 +71,9 @@ class WSConsumer(WebsocketConsumer):
         self.send(json.dumps(
             {'std_score': score, 'confidence_score': average_confidence_score, 'num_boxes': number_of_boxes,
              'above_threshold': above_threshold_scores_average, 'output': "data:image/jpg;base64," + img,
-             'saliency': "data:image/jpg;base64," + saliency}))
+             'saliency': "data:image/jpg;base64," + saliency,
+             "gradcam_images": gradcam_images
+             }))
 
 
 class Videocamera(object):
@@ -96,6 +95,7 @@ class Videocamera(object):
         while True:
             (self.grabbed, self.frame) = self.video.read()
 
+attack_recent = ["no", "no"]
 
 def gen(u, s, v, mean_img, attack, type_of_attack, eps, frame_array):
     # frame_jpeg, frame_array = camera.get_frame()
@@ -104,6 +104,11 @@ def gen(u, s, v, mean_img, attack, type_of_attack, eps, frame_array):
     image = np.stack([frame_array], axis=0).astype(np.float32)
 
     if attack:
+        attack_recent[0] = attack_recent[1]
+        attack_recent[1] = "yes"
+
+        image_save = cv2.cvtColor(frame_array, cv2.COLOR_BGR2RGB)
+        cv2.imwrite("djangoapp/frame.jpg", image_save)
         if type_of_attack == "fast":
             attack = FastGradientMethod(estimator=frcnn, eps=eps, eps_step=2)
         elif type_of_attack == "projected":
@@ -111,8 +116,14 @@ def gen(u, s, v, mean_img, attack, type_of_attack, eps, frame_array):
 
         image = attack.generate(x=image, y=None)
 
+        adv = cv2.cvtColor(image[0].astype(np.uint8), cv2.COLOR_BGR2RGB)
+        cv2.imwrite("djangoapp/frame_adv.jpg", adv)
+
         predictions = frcnn.predict(x=image)
     else:
+        attack_recent[0] = attack_recent[1]
+        attack_recent[1] = "no"
+
         predictions = frcnn.predict(x=image)
 
     for i in range(image.shape[0]):
@@ -123,6 +134,10 @@ def gen(u, s, v, mean_img, attack, type_of_attack, eps, frame_array):
         # Plot predictions
         output_jpg, number_of_boxes = plot_image_with_boxes(img=image[i].copy(), boxes=predictions_boxes,
                                                         pred_cls=predictions_class, pred_scr=predictions_score)
+
+    print(attack_recent)
+    if attack_recent[1] == "no" and attack_recent[0] == "yes":
+        activate_gradcam()
 
     x = image.reshape((-1, 8 * 8 * 3))
     img = np.dot(x - mean_img, u)
@@ -335,3 +350,21 @@ def plot_image_with_boxes(img, boxes, pred_cls, pred_scr, scale=2):
     _, jpeg = cv2.imencode('.jpg', output)
 
     return jpeg.tobytes(), number_of_boxes
+
+def activate_gradcam():
+    os.system('python ../pytorch_grad_cam/cam.py '
+              '--image-path djangoapp/frame.jpg '
+              '--method eigengradcam --attack True')
+
+    os.system('python ../pytorch_grad_cam/cam.py '
+              '--image-path djangoapp/frame.jpg '
+              '--method eigengradcam --attack False')
+
+    with open("djangoapp/eigengradcam_adv.jpg", "rb") as image_file:
+        gradcam_adv_image_data = base64.b64encode(image_file.read()).decode('utf-8')
+
+    with open("djangoapp/eigengradcam_clean.jpg", "rb") as image_file:
+        gradcam_clean_image_data = base64.b64encode(image_file.read()).decode('utf-8')
+
+    gradcam_images[0] = "data:image/jpg;base64," + str(gradcam_clean_image_data)
+    gradcam_images[1] = "data:image/jpg;base64," + str(gradcam_adv_image_data)
